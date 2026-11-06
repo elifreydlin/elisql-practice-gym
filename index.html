@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SQL Analytics Practice Gym - 6 Core Clauses</title>
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --panel-bg: #1e293b;
+      --border-color: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-green: #10b981;
+      --accent-blue: #3b82f6;
+      --editor-bg: #090d16;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-dark); color: var(--text-main);
+      height: 100vh; display: flex; flex-direction: column;
+    }
+
+    header {
+      background-color: var(--panel-bg);
+      border-bottom: 1px solid var(--border-color);
+      padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;
+    }
+
+    header h1 { margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--accent-green); }
+
+    .main-container { display: flex; flex: 1; overflow: hidden; }
+
+    .sidebar {
+      width: 320px; background-color: var(--panel-bg);
+      border-right: 1px solid var(--border-color);
+      display: flex; flex-direction: column; overflow-y: auto;
+    }
+
+    .class-selector { padding: 12px; border-bottom: 1px solid var(--border-color); }
+    .class-selector label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 6px; }
+    .class-selector select { width: 100%; padding: 8px; background-color: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; font-weight: 600; outline: none; }
+
+    .ex-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex: 1; }
+    .ex-item { padding: 12px 16px; border-bottom: 1px solid var(--border-color); cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
+    .ex-item:hover { background-color: rgba(255,255,255,0.03); }
+    .ex-item.active { background-color: rgba(16, 185, 129, 0.1); border-left: 3px solid var(--accent-green); }
+
+    .ex-info { display: flex; flex-direction: column; gap: 2px; }
+    .ex-title { font-size: 0.85rem; font-weight: 600; color: var(--text-main); }
+    .ex-level { font-size: 0.7rem; color: var(--text-muted); }
+
+    .status-icon { width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); font-size: 0.8rem; }
+    .status-icon.done { background-color: var(--accent-green); border-color: var(--accent-green); color: white; }
+
+    .workspace { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .problem-box { background-color: #162032; border-bottom: 1px solid var(--border-color); padding: 16px 20px; }
+    .problem-box h2 { margin: 0 0 6px 0; font-size: 1.1rem; color: #38bdf8; }
+    .problem-box p { margin: 0; font-size: 0.9rem; color: var(--text-muted); line-height: 1.4; }
+
+    .editor-section { display: flex; flex-direction: column; flex: 1; padding: 16px; gap: 12px; overflow-y: auto; }
+    .editor-header { display: flex; justify-content: space-between; align-items: center; }
+    .editor-header span { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+
+    textarea {
+      width: 100%; height: 140px; background-color: var(--editor-bg);
+      border: 1px solid var(--border-color); border-radius: 8px; color: #e2e8f0;
+      font-family: monospace; font-size: 0.95rem; padding: 14px; resize: vertical; outline: none;
+    }
+    textarea:focus { border-color: var(--accent-blue); }
+
+    .actions { display: flex; gap: 10px; align-items: center; }
+    button { padding: 9px 18px; border-radius: 6px; border: none; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+    .btn-run { background-color: var(--accent-green); color: white; }
+    .btn-hint { background-color: #334155; color: #cbd5e1; }
+    .btn-reset { background-color: transparent; border: 1px solid var(--border-color); color: var(--text-muted); }
+
+    .hint-box { display: none; background-color: #1e1b4b; border: 1px solid #4338ca; color: #c7d2fe; padding: 10px 14px; border-radius: 6px; font-size: 0.85rem; }
+
+    .output-section { flex: 1; display: flex; flex-direction: column; gap: 10px; min-height: 180px; }
+    .output-status { font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; }
+    .status-pass-text { color: var(--accent-green); }
+    .status-fail-text { color: #f43f5e; }
+
+    .table-wrapper { overflow: auto; border: 1px solid var(--border-color); border-radius: 6px; background-color: var(--editor-bg); max-height: 250px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: left; }
+    th { background-color: #1e293b; color: #94a3b8; padding: 8px 12px; font-weight: 600; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; }
+    td { padding: 8px 12px; border-bottom: 1px solid #1e293b; color: #cbd5e1; }
+    tr:nth-child(even) { background-color: rgba(255,255,255,0.01); }
+    .error-msg { color: #fb7185; background-color: #881337; border: 1px solid #9f1239; padding: 10px 14px; border-radius: 6px; font-family: monospace; font-size: 0.85rem; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/alasql@1.7/dist/alasql.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1>⚡ SQL 6 Core Clauses Gym</h1>
+    <div style="font-size:0.8rem; color:var(--text-muted);" id="overall-progress">Progress: 0 / 60 Solved</div>
+  </header>
+
+  <div class="main-container">
+    <div class="sidebar">
+      <div class="class-selector">
+        <label for="class-select">Select Clause Class</label>
+        <select id="class-select" onchange="changeClass()">
+          <option value="0">Class 1: SELECT (Columns)</option>
+          <option value="1">Class 2: FROM (Tables & Joins)</option>
+          <option value="2">Class 3: WHERE (Row Filters)</option>
+          <option value="3">Class 4: GROUP BY (Aggregations)</option>
+          <option value="4">Class 5: ORDER BY (Sorting)</option>
+          <option value="5">Class 6: LIMIT (Top Rankings)</option>
+        </select>
+      </div>
+      <ul class="ex-list" id="exercise-list"></ul>
+    </div>
+
+    <div class="workspace">
+      <div class="problem-box">
+        <h2 id="ex-title">Exercise Title</h2>
+        <p id="ex-desc">Exercise description goes here...</p>
+      </div>
+
+      <div class="editor-section">
+        <div class="editor-header">
+          <span>SQL Query Editor</span>
+          <button class="btn-reset" onclick="resetQuery()">Reset Editor</button>
+        </div>
+        <textarea id="sql-input" spellcheck="false" placeholder="Write your SQL query here..."></textarea>
+        
+        <div class="actions">
+          <button class="btn-run" onclick="runQuery()">▶ Run & Check Answer</button>
+          <button class="btn-hint" onclick="toggleHint()">💡 Need a Hint?</button>
+        </div>
+
+        <div id="hint-box" class="hint-box"></div>
+
+        <div class="output-section">
+          <div id="output-status" class="output-status"></div>
+          <div id="output-table-container" class="table-wrapper"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function initDatabase() {
+      alasql("CREATE TABLE deals (deal_id STRING, industry STRING, state STRING, nsf_count INT, funded_amount INT, requested_amount INT, factor_rate FLOAT, status STRING, broker_id STRING)");
+      alasql(`INSERT INTO deals VALUES 
+        ('DEAL-101', 'Construction', 'NY', 6, 75000, 100000, 1.35, 'Funded', 'BRK-01'),
+        ('DEAL-102', 'Retail', 'FL', 2, 25000, 30000, 1.28, 'Paid', 'BRK-02'),
+        ('DEAL-103', 'Transportation', 'NY', 8, 120000, 150000, 1.40, 'Default', 'BRK-01'),
+        ('DEAL-104', 'Restaurant', 'CA', 5, 45000, 50000, 1.32, 'Funded', 'BRK-03'),
+        ('DEAL-105', 'Healthcare', 'FL', 0, 150000, 150000, 1.22, 'Funded', 'BRK-02'),
+        ('DEAL-106', 'Construction', 'TX', 7, 95000, 110000, 1.38, 'Default', 'BRK-03'),
+        ('DEAL-107', 'Restaurant', 'NY', 1, 60000, 70000, 1.30, 'Funded', 'BRK-01'),
+        ('DEAL-108', 'Transportation', 'FL', 4, 85000, 100000, 1.36, 'Paid', 'BRK-02')
+      `);
+
+      alasql("CREATE TABLE brokers (broker_id STRING, broker_name STRING, commission_rate FLOAT)");
+      alasql(`INSERT INTO brokers VALUES 
+        ('BRK-01', 'Apex Financial', 0.10),
+        ('BRK-02', 'Vanguard Capital', 0.08),
+        ('BRK-03', 'Summit Funding', 0.12)
+      `);
+    }
+
+    const classes = [
+      {
+        name: "Class 1: SELECT",
+        exercises: [
+          { title: "1. Select All Columns", desc: "Write a query to retrieve all columns from the `deals` table.", starter: "", target: "SELECT * FROM deals", hint: "Use * after SELECT to grab all columns." },
+          { title: "2. Single Column Selection", desc: "Display only the `industry` column for all records in `deals`.", starter: "", target: "SELECT industry FROM deals", hint: "Specify 'industry' right after SELECT." },
+          { title: "3. Multi-Column Selection", desc: "Retrieve `deal_id`, `industry`, and `funded_amount` from `deals`.", starter: "", target: "SELECT deal_id, industry, funded_amount FROM deals", hint: "Separate column names with commas." },
+          { title: "4. Column Distinct Listing", desc: "List all unique `industry` values present in `deals`.", starter: "", target: "SELECT DISTINCT industry FROM deals", hint: "Use the DISTINCT keyword right after SELECT." },
+          { title: "5. Mathematical Expression", desc: "Show `deal_id` and the calculated unapproved request difference (`requested_amount - funded_amount`).", starter: "", target: "SELECT deal_id, requested_amount - funded_amount FROM deals", hint: "You can perform subtraction between numeric column names." },
+          { title: "6. Renaming Output Columns", desc: "Select `funded_amount` and alias it as `total_funded`.", starter: "", target: "SELECT funded_amount AS total_funded FROM deals", hint: "Use the AS keyword to rename a column." },
+          { title: "7. Combining Fields & Expressions", desc: "Select `deal_id`, `funded_amount`, and calculate `funded_amount * factor_rate` aliased as `payback_amount`.", starter: "", target: "SELECT deal_id, funded_amount, funded_amount * factor_rate AS payback_amount FROM deals", hint: "Multiply columns using * and rename with AS." },
+          { title: "8. Select State & Status", desc: "Display the `state` and `status` of every deal.", starter: "", target: "SELECT state, status FROM deals", hint: "List both columns separated by a comma." },
+          { title: "9. Select Broker IDs", desc: "Get all unique `broker_id`s operating in the `deals` table.", starter: "", target: "SELECT DISTINCT broker_id FROM deals", hint: "Combine DISTINCT with broker_id." },
+          { title: "10. Comprehensive Deal Details", desc: "Show `deal_id`, `state`, `nsf_count`, and `factor_rate`.", starter: "", target: "SELECT deal_id, state, nsf_count, factor_rate FROM deals", hint: "List all 4 requested column names." }
+        ]
+      },
+      {
+        name: "Class 2: FROM",
+        exercises: [
+          { title: "11. Query Brokers Table", desc: "Select all columns from the `brokers` table.", starter: "", target: "SELECT * FROM brokers", hint: "Specify 'FROM brokers'." },
+          { title: "12. Table Aliasing", desc: "Select `deal_id` from table `deals` aliased as `d`.", starter: "", target: "SELECT d.deal_id FROM deals d", hint: "Put an alias 'd' right after 'deals'." },
+          { title: "13. Single Field Broker Lookup", desc: "Retrieve `broker_name` from the `brokers` table.", starter: "", target: "SELECT broker_name FROM brokers", hint: "Query the brokers table." },
+          { title: "14. Inner Join Deals & Brokers", desc: "Join `deals` with `brokers` on `broker_id` and select `deal_id` and `broker_name`.", starter: "", target: "SELECT deals.deal_id, brokers.broker_name FROM deals JOIN brokers ON deals.broker_id = brokers.broker_id", hint: "Use JOIN ... ON deals.broker_id = brokers.broker_id." },
+          { title: "15. Join with Alias", desc: "Join `deals d` and `brokers b` to show `d.deal_id` and `b.commission_rate`.", starter: "", target: "SELECT d.deal_id, b.commission_rate FROM deals d JOIN brokers b ON d.broker_id = b.broker_id", hint: "Use short table aliases d and b." },
+          { title: "16. Broker Portfolio Funding", desc: "Select `b.broker_name` and `d.funded_amount` by joining `brokers` and `deals`.", starter: "", target: "SELECT b.broker_name, d.funded_amount FROM deals d JOIN brokers b ON d.broker_id = b.broker_id", hint: "Join on broker_id." },
+          { title: "17. Join for State & Broker", desc: "Show `deal_id`, `state`, and `broker_name` by joining both tables.", starter: "", target: "SELECT d.deal_id, d.state, b.broker_name FROM deals d JOIN brokers b ON d.broker_id = b.broker_id", hint: "Include state from deals." },
+          { title: "18. Join with Factor Rate", desc: "Select `d.deal_id`, `b.broker_name`, and `d.factor_rate`.", starter: "", target: "SELECT d.deal_id, b.broker_name, d.factor_rate FROM deals d JOIN brokers b ON d.broker_id = b.broker_id", hint: "Pull columns from both tables." },
+          { title: "19. Join for NSF Checks", desc: "Show `broker_name` and `nsf_count` for all deals.", starter: "", target: "SELECT b.broker_name, d.nsf_count FROM deals d JOIN brokers b ON d.broker_id = b.broker_id", hint: "Join deals and brokers on broker_id." },
+          { title: "20. Full Joined Table Overview", desc: "Retrieve all columns from `deals` joined with `brokers`.", starter: "", target: "SELECT * FROM deals JOIN brokers ON deals.broker_id = brokers.broker_id", hint: "Use SELECT * with a JOIN." }
+        ]
+      },
+      {
+        name: "Class 3: WHERE",
+        exercises: [
+          { title: "21. Equal String Filter", desc: "Select all deals where `status` is `'Funded'`.", starter: "", target: "SELECT * FROM deals WHERE status = 'Funded'", hint: "String values need single quotes: status = 'Funded'." },
+          { title: "22. Numeric Greater Than", desc: "Find all deals where `nsf_count` is greater than or equal to 5.", starter: "", target: "SELECT * FROM deals WHERE nsf_count >= 5", hint: "Use >= 5." },
+          { title: "23. Single State Filter", desc: "Select `deal_id` and `industry` for deals in `'NY'`.", starter: "", target: "SELECT deal_id, industry FROM deals WHERE state = 'NY'", hint: "Filter with state = 'NY'." },
+          { title: "24. Filtering with IN Clause", desc: "Find deals where `industry` is either `'Transportation'` or `'Restaurant'`.", starter: "", target: "SELECT * FROM deals WHERE industry IN ('Transportation', 'Restaurant')", hint: "Use: WHERE industry IN ('Transportation', 'Restaurant')." },
+          { title: "25. Multi-condition AND Filter", desc: "Select deals in `'NY'` AND with `nsf_count` >= 5.", starter: "", target: "SELECT * FROM deals WHERE state = 'NY' AND nsf_count >= 5", hint: "Combine conditions using AND." },
+          { title: "26. High Amount Range", desc: "Find deals with `funded_amount` between 50000 and 100000.", starter: "", target: "SELECT * FROM deals WHERE funded_amount BETWEEN 50000 AND 100000", hint: "Use BETWEEN min AND max." },
+          { title: "27. Status OR Filter", desc: "Find deals where `status` is `'Default'` OR `status` is `'Paid'`.", starter: "", target: "SELECT * FROM deals WHERE status = 'Default' OR status = 'Paid'", hint: "Use OR between conditions." },
+          { title: "28. High Risk & High Amount", desc: "Select `deal_id` where `nsf_count` > 3 AND `funded_amount` > 70000.", starter: "", target: "SELECT deal_id FROM deals WHERE nsf_count > 3 AND funded_amount > 70000", hint: "Use AND to combine both logic checks." },
+          { title: "29. Specific Broker Filter", desc: "Select all deals submitted by broker `'BRK-01'`.", starter: "", target: "SELECT * FROM deals WHERE broker_id = 'BRK-01'", hint: "Check broker_id = 'BRK-01'." },
+          { title: "30. Low Factor Rate Check", desc: "Select deals where `factor_rate` is strictly less than 1.30.", starter: "", target: "SELECT * FROM deals WHERE factor_rate < 1.30", hint: "Use < 1.30." }
+        ]
+      },
+      {
+        name: "Class 4: GROUP BY",
+        exercises: [
+          { title: "31. Count Total Deals", desc: "Count the total number of deals in the table as `total_deals`.", starter: "", target: "SELECT COUNT(*) AS total_deals FROM deals", hint: "Use COUNT(*) aggregate function." },
+          { title: "32. Sum Funded Amount by Industry", desc: "Calculate total `funded_amount` (as `total_funded`) grouped by `industry`.", starter: "", target: "SELECT industry, SUM(funded_amount) AS total_funded FROM deals GROUP BY industry", hint: "Group by industry and SUM(funded_amount)." },
+          { title: "33. Average Factor Rate by State", desc: "Find average `factor_rate` grouped by `state`.", starter: "", target: "SELECT state, AVG(factor_rate) FROM deals GROUP BY state", hint: "Use AVG(factor_rate) GROUP BY state." },
+          { title: "34. Count Deals per State", desc: "Show `state` and the count of deals in each state as `deal_count`.", starter: "", target: "SELECT state, COUNT(*) AS deal_count FROM deals GROUP BY state", hint: "Group by state with COUNT(*)." },
+          { title: "35. Max NSF Count by Broker", desc: "Find maximum `nsf_count` for each `broker_id`.", starter: "", target: "SELECT broker_id, MAX(nsf_count) FROM deals GROUP BY broker_id", hint: "Use MAX(nsf_count) GROUP BY broker_id." },
+          { title: "36. Multi-Column Grouping", desc: "Group total funded amount by both `industry` and `state`.", starter: "", target: "SELECT industry, state, SUM(funded_amount) FROM deals GROUP BY industry, state", hint: "Specify multiple columns in GROUP BY." },
+          { title: "37. Group Filtering with HAVING", desc: "Group deals by `industry` and show only industries with total funded > 100000.", starter: "", target: "SELECT industry, SUM(funded_amount) FROM deals GROUP BY industry HAVING SUM(funded_amount) > 100000", hint: "Use HAVING after GROUP BY." },
+          { title: "38. Average Funded Amount per Status", desc: "Calculate average `funded_amount` grouped by deal `status`.", starter: "", target: "SELECT status, AVG(funded_amount) FROM deals GROUP BY status", hint: "Group by status using AVG." },
+          { title: "39. Minimum Funded Amount by State", desc: "Find minimum `funded_amount` per `state`.", starter: "", target: "SELECT state, MIN(funded_amount) FROM deals GROUP BY state", hint: "Use MIN(funded_amount) GROUP BY state." },
+          { title: "40. Count High Risk Deals per Broker", desc: "Count deals per `broker_id` having average `nsf_count` > 3.", starter: "", target: "SELECT broker_id, COUNT(*) FROM deals GROUP BY broker_id HAVING AVG(nsf_count) > 3", hint: "Use GROUP BY broker_id HAVING AVG(nsf_count) > 3." }
+        ]
+      },
+      {
+        name: "Class 5: ORDER BY",
+        exercises: [
+          { title: "41. Basic Ascending Sort", desc: "Select all deals sorted by `funded_amount` ascending.", starter: "", target: "SELECT * FROM deals ORDER BY funded_amount ASC", hint: "Use ORDER BY column ASC." },
+          { title: "42. Descending Risk Sort", desc: "Select `deal_id` and `nsf_count` sorted by `nsf_count` descending.", starter: "", target: "SELECT deal_id, nsf_count FROM deals ORDER BY nsf_count DESC", hint: "Use ORDER BY nsf_count DESC." },
+          { title: "43. Sort by Factor Rate", desc: "Select deals ordered from lowest to highest `factor_rate`.", starter: "", target: "SELECT * FROM deals ORDER BY factor_rate ASC", hint: "ASC sorts from smallest to largest." },
+          { title: "44. Multi-Column Sort", desc: "Order deals by `state` ASC, then by `funded_amount` DESC.", starter: "", target: "SELECT * FROM deals ORDER BY state ASC, funded_amount DESC", hint: "Separate sort rules with commas." },
+          { title: "45. Sort Aggregated Group Results", desc: "Group total `funded_amount` by `industry` and sort total descending.", starter: "", target: "SELECT industry, SUM(funded_amount) AS total FROM deals GROUP BY industry ORDER BY total DESC", hint: "Sort by the aliased aggregated column." },
+          { title: "46. Alphabetical Industry Sort", desc: "List all distinct industries sorted alphabetically.", starter: "", target: "SELECT DISTINCT industry FROM deals ORDER BY industry ASC", hint: "Combine DISTINCT with ORDER BY." },
+          { title: "47. Sort Deals by Unapproved Amount", desc: "Sort deals by (`requested_amount - funded_amount`) descending.", starter: "", target: "SELECT deal_id, requested_amount - funded_amount AS diff FROM deals ORDER BY diff DESC", hint: "Order by calculated alias." },
+          { title: "48. Order by NSF Count then Factor Rate", desc: "Sort deals by `nsf_count` DESC, then `factor_rate` DESC.", starter: "", target: "SELECT * FROM deals ORDER BY nsf_count DESC, factor_rate DESC", hint: "List both sort priorities." },
+          { title: "49. Highest Funded Deals First", desc: "Select `deal_id`, `state`, `funded_amount` sorted highest funded first.", starter: "", target: "SELECT deal_id, state, funded_amount FROM deals ORDER BY funded_amount DESC", hint: "Use DESC for highest first." },
+          { title: "50. Sort Brokers by Name", desc: "Select all brokers sorted alphabetically by `broker_name`.", starter: "", target: "SELECT * FROM brokers ORDER BY broker_name ASC", hint: "Order brokers table by name." }
+        ]
+      },
+      {
+        name: "Class 6: LIMIT",
+        exercises: [
+          { title: "51. Limit First 3 Rows", desc: "Select any 3 deals from the `deals` table.", starter: "", target: "SELECT * FROM deals LIMIT 3", hint: "Append LIMIT 3 at the end." },
+          { title: "52. Single Top Deal", desc: "Select the single deal with the highest `funded_amount`.", starter: "", target: "SELECT * FROM deals ORDER BY funded_amount DESC LIMIT 1", hint: "Combine ORDER BY DESC with LIMIT 1." },
+          { title: "53. Top 3 Highest NSF Risk Deals", desc: "Select `deal_id` and `nsf_count` for the 3 deals with most NSFs.", starter: "", target: "SELECT deal_id, nsf_count FROM deals ORDER BY nsf_count DESC LIMIT 3", hint: "ORDER BY nsf_count DESC then LIMIT 3." },
+          { title: "54. Top 2 Lowest Factor Rates", desc: "Show `deal_id` and `factor_rate` for the 2 lowest factor rates.", starter: "", target: "SELECT deal_id, factor_rate FROM deals ORDER BY factor_rate ASC LIMIT 2", hint: "Sort ASC and LIMIT 2." },
+          { title: "55. Largest Deal Request", desc: "Find `deal_id` and `requested_amount` for the single largest requested deal.", starter: "", target: "SELECT deal_id, requested_amount FROM deals ORDER BY requested_amount DESC LIMIT 1", hint: "ORDER BY requested_amount DESC LIMIT 1." },
+          { title: "56. Top Funded Industry Summary", desc: "Show the single industry with the highest total funded amount.", starter: "", target: "SELECT industry, SUM(funded_amount) AS total FROM deals GROUP BY industry ORDER BY total DESC LIMIT 1", hint: "GROUP BY, ORDER BY total DESC, LIMIT 1." },
+          { title: "57. Top 5 Deals in NY", desc: "Find top 5 highest funded deals in state `'NY'`.", starter: "", target: "SELECT * FROM deals WHERE state = 'NY' ORDER BY funded_amount DESC LIMIT 5", hint: "WHERE state = 'NY' ORDER BY ... LIMIT 5." },
+          { title: "58. Master 6-Clause Combination", desc: "Select `industry`, `SUM(funded_amount)` for deals with `nsf_count` < 7, grouped by `industry`, having sum > 50000, ordered descending, limit 2.", starter: "", target: "SELECT industry, SUM(funded_amount) FROM deals WHERE nsf_count < 7 GROUP BY industry HAVING SUM(funded_amount) > 50000 ORDER BY SUM(funded_amount) DESC LIMIT 2", hint: "Follow exact order: SELECT, FROM, WHERE, GROUP BY, HAVING, ORDER BY, LIMIT." },
+          { title: "59. Top Broker by Deal Count", desc: "Find the single `broker_id` with the most deals.", starter: "", target: "SELECT broker_id, COUNT(*) AS count FROM deals GROUP BY broker_id ORDER BY count DESC LIMIT 1", hint: "Group by broker_id, count, order desc, limit 1." },
+          { title: "60. Final Benchmark Top Deal", desc: "Select `deal_id`, `state`, `funded_amount` for top 3 funded deals in `'FL'`.", starter: "", target: "SELECT deal_id, state, funded_amount FROM deals WHERE state = 'FL' ORDER BY funded_amount DESC LIMIT 3", hint: "Filter FL, order funded desc, limit 3." }
+        ]
+      }
+    ];
+
+    let currentClassIdx = 0;
+    let currentExIdx = 0;
+    let solvedSet = new Set();
+
+    function renderExerciseList() {
+      const listEl = document.getElementById('exercise-list');
+      listEl.innerHTML = '';
+      const exArray = classes[currentClassIdx].exercises;
+
+      exArray.forEach((ex, idx) => {
+        const key = `${currentClassIdx}-${idx}`;
+        const isDone = solvedSet.has(key);
+        const isActive = idx === currentExIdx;
+
+        const li = document.createElement('li');
+        li.className = `ex-item ${isActive ? 'active' : ''}`;
+        li.onclick = () => selectExercise(idx);
+
+        li.innerHTML = `
+          <div class="ex-info">
+            <span class="ex-title">${ex.title}</span>
+            <span class="ex-level">Level ${idx + 1} / 10</span>
+          </div>
+          <div class="status-icon ${isDone ? 'done' : ''}">${isDone ? '✓' : ''}</div>
+        `;
+        listEl.appendChild(li);
+      });
+    }
+
+    function selectExercise(idx) {
+      currentExIdx = idx;
+      const ex = classes[currentClassIdx].exercises[currentExIdx];
+      document.getElementById('ex-title').innerText = ex.title;
+      document.getElementById('ex-desc').innerText = ex.desc;
+      document.getElementById('sql-input').value = ex.starter || "";
+      document.getElementById('hint-box').style.display = 'none';
+      document.getElementById('hint-box').innerText = ex.hint;
+      document.getElementById('output-status').innerHTML = '';
+      document.getElementById('output-table-container').innerHTML = '';
+      renderExerciseList();
+    }
+
+    function changeClass() {
+      currentClassIdx = parseInt(document.getElementById('class-select').value);
+      currentExIdx = 0;
+      selectExercise(0);
+    }
+
+    function toggleHint() {
+      const hintBox = document.getElementById('hint-box');
+      hintBox.style.display = hintBox.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function resetQuery() {
+      const ex = classes[currentClassIdx].exercises[currentExIdx];
+      document.getElementById('sql-input').value = ex.starter || "";
+    }
+
+    function renderTable(data) {
+      if (!data || data.length === 0) return "<p style='padding:10px; color:#94a3b8;'><i>No rows returned.</i></p>";
+      const keys = Object.keys(data[0]);
+      let html = "<table><thead><tr>";
+      keys.forEach(k => html += `<th>${k}</th>`);
+      html += "</tr></thead><tbody>";
+      data.forEach(row => {
+        html += "<tr>";
+        keys.forEach(k => html += `<td>${row[k]}</td>`);
+        html += "</tr>";
+      });
+      html += "</tbody></table>";
+      return html;
+    }
+
+    function runQuery() {
+      const userSql = document.getElementById('sql-input').value.trim();
+      const statusEl = document.getElementById('output-status');
+      const tableContainer = document.getElementById('output-table-container');
+
+      if (!userSql) {
+        statusEl.className = 'output-status status-fail-text';
+        statusEl.innerHTML = '⚠️ Please write a query in the box before running.';
+        return;
+      }
+
+      const ex = classes[currentClassIdx].exercises[currentExIdx];
+
+      try {
+        const userRes = alasql(userSql);
+        const targetRes = alasql(ex.target);
+
+        tableContainer.innerHTML = renderTable(userRes);
+
+        if (JSON.stringify(userRes) === JSON.stringify(targetRes)) {
+          statusEl.className = 'output-status status-pass-text';
+          statusEl.innerHTML = '🎉 Correct Answer! Exercise Passed.';
+          solvedSet.add(`${currentClassIdx}-${currentExIdx}`);
+          document.getElementById('overall-progress').innerText = `Progress: ${solvedSet.size} / 60 Solved`;
+          renderExerciseList();
+        } else {
+          statusEl.className = 'output-status status-fail-text';
+          statusEl.innerHTML = '❌ Output does not match expected target result. Check your query logic.';
+        }
+      } catch (err) {
+        tableContainer.innerHTML = `<div class="error-msg">SQL Syntax Error: ${err.message}</div>`;
+        statusEl.className = 'output-status status-fail-text';
+        statusEl.innerHTML = '🚨 Execution Failed';
+      }
+    }
+
+    window.onload = function() {
+      initDatabase();
+      selectExercise(0);
+    };
+  </script>
+</body>
+</html>
